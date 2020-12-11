@@ -40,7 +40,7 @@ signer = Signer(
     fingerprint = config['fingerprint'],
     private_key_file_location = config['key_file'],
     pass_phrase = config['pass_phrase']
-)
+    )
 
 
 print ("\n===========================[ Login check ]=============================")
@@ -70,7 +70,7 @@ for region in target_regions:
     config["region"] = region.region_name
 
     # change_autonomous_db_license(config, signer, target_compartments)
-    stop_compute_instances(config, signer, target_compartments)
-    stop_database_systems(config, signer, target_compartments)
-    stop_autonomous_dbs(config, signer, target_compartments)
+    start_compute_instances(config, signer, target_compartments)
+    start_database_systems(config, signer, target_compartments)
+    start_autonomous_dbs(config, signer, target_compartments)
 

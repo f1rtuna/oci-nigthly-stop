@@ -2,6 +2,43 @@ import oci
 
 resource_name = 'autonomous databases'
 
+def start_autonomous_dbs(config, signer, compartments):
+    target_resources = []
+
+    print("\nListing all {}... (* is marked for start)".format(resource_name))
+    for compartment in compartments:
+        # print("  compartment: {}".format(compartment.name))
+        resources = _get_resource_list(config, signer, compartment.id)
+        for resource in resources:
+            go = 0
+            if (resource.lifecycle_state == 'STOPPED'):
+                if ('control' in resource.defined_tags) and ('nightly_stop' in resource.defined_tags['control']): 
+                    if (resource.defined_tags['control']['nightly_stop'].upper() != 'FALSE'):
+                        go = 1
+                else:
+                    go = 1
+
+            if (go == 1):
+                print("    * {} ({}) in {}".format(resource.display_name, resource.lifecycle_state, compartment.name))
+                target_resources.append(resource)
+            else:
+                print("      {} ({}) in {}".format(resource.display_name, resource.lifecycle_state, compartment.name))
+
+    print('\nStarting * marked {}...'.format(resource_name))
+    for resource in target_resources:
+        try:
+            response = _resource_start_action(config, signer, resource.id)
+        except oci.exceptions.ServiceError as e:
+            print("---------> error. status: {}".format(e))
+            pass
+        else:
+            if response.lifecycle_state == 'STARTING':
+                print("    start requested: {} ({})".format(response.display_name, response.lifecycle_state))
+            else:
+                print("---------> error starting {} ({})".format(response.display_name, response.lifecycle_state))
+
+    print("\nAll {} started!".format(resource_name))
+
 def stop_autonomous_dbs(config, signer, compartments):
     target_resources = []
 
@@ -89,6 +126,13 @@ def _change_license_model(config, signer, resource_id, license_model):
 def _resource_action(config, signer, resource_id):
     object = oci.database.DatabaseClient(config=config, signer=signer)
     response = object.stop_autonomous_database(
+        resource_id
+    )
+    return response.data
+
+def _resource_start_action(config, signer, resource_id):
+    object = oci.database.DatabaseClient(config=config, signer=signer)
+    response = object.start_autonomous_database(
         resource_id
     )
     return response.data

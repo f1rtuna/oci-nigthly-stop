@@ -2,6 +2,48 @@ import oci
 
 resource_name = 'database systems'
 
+def start_database_systems(config, signer, compartments):
+    target_resources = []
+
+    print("Listing all {}... (* is marked for start)".format(resource_name))
+    for compartment in compartments:
+        # print("  compartment: {}".format(compartment.name))
+        db_systems = _get_db_system_list(config, signer, compartment.id)
+        for db_system in db_systems:
+            go = 0
+            if (db_system.lifecycle_state == 'STOPPED'):
+                if ('control' in db_system.defined_tags) and ('nightly_stop' in db_system.defined_tags['control']): 
+                    if (db_system.defined_tags['control']['nightly_stop'].upper() != 'FALSE'):
+                        go = 1
+                else:
+                    go = 1
+
+            print("      {} ({}) in {}".format(db_system.display_name, db_system.lifecycle_state, compartment.name))
+            if (go == 1):
+                db_nodes = _get_db_node_list(config, signer, compartment.id, db_system.id)
+
+                for db_node in db_nodes:
+                    if (db_node.lifecycle_state == 'STOPPED'):
+                        print("        * node:{} ({})".format(db_node.hostname, db_node.lifecycle_state))
+                        target_resources.append(db_node)
+                    else:
+                        print("          node:{} ({})".format(db_node.hostname, db_node.lifecycle_state))
+
+    print('\nStarting * marked {}...'.format(resource_name))
+    for resource in target_resources:
+        try:
+            response = _db_node_action(config, signer, resource.id, 'START')
+        except oci.exceptions.ServiceError as e:
+            print("---------> error. status: {}".format(e))
+            pass
+        else:
+            if response.lifecycle_state == 'STARTING':
+                print("    start requested: {} ({})".format(response.hostname, response.lifecycle_state))
+            else:
+                print("---------> error starting {} ({})".format(response.hostname, response.lifecycle_state))
+
+    print("\nAll {} started!".format(resource_name))
+
 def stop_database_systems(config, signer, compartments):
     target_resources = []
 
