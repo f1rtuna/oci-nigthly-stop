@@ -73,4 +73,3 @@ for region in target_regions:
     start_compute_instances(config, signer, target_compartments)
     start_database_systems(config, signer, target_compartments)
     start_autonomous_dbs(config, signer, target_compartments)
-
